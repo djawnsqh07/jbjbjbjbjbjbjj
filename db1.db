@@ -1,0 +1,22 @@
+-- users 테이블 생성
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    email TEXT,
+    gender TEXT,
+    birthday TEXT,
+    age INTEGER
+);
+
+-- issues 테이블 생성
+CREATE TABLE IF NOT EXISTS issues (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT DEFAULT '접수됨',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
