@@ -51,6 +51,9 @@ if 'username' not in st.session_state:
     st.session_state.username = None
 if 'page' not in st.session_state:
     st.session_state.page = "로그인" # 초기 페이지 설정
+# 회원가입 성공 메시지 관리를 위한 세션 상태 추가
+if 'signup_success_username' not in st.session_state:
+    st.session_state.signup_success_username = None
 
 # 추가: 문제점 목록을 저장할 리스트 (앱 재시작 시 초기화됨, 영구 저장을 원하면 DB 필요)
 if 'issues' not in st.session_state:
@@ -159,6 +162,14 @@ if st.session_state.page == "로그인":
     # --- 디버깅용 print ---
     print("DEBUG: 로그인 페이지 표시 중.")
     # -------------------
+
+    # 회원가입 성공 후 로그인 페이지로 왔을 때 메시지 표시
+    if st.session_state.signup_success_username:
+        st.success(f"**{st.session_state.signup_success_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다. 🎉")
+        st.balloons() # 풍선 효과
+        # 메시지 한 번 표시 후 초기화하여 다음 번 로그인 페이지 방문 시에는 나타나지 않도록 함
+        st.session_state.signup_success_username = None
+
     username = st.text_input("아이디", key="login_username_input")
     password = st.text_input("비밀번호", type="password", key="login_password_input")
     login_button = st.button("로그인")
@@ -204,9 +215,8 @@ elif st.session_state.page == "회원가입":
             else:
                 # register_user 함수를 호출하여 데이터베이스에 사용자 정보 저장
                 if register_user(new_username, new_password, new_email, new_gender, new_birthday, new_age):
-                    # 회원가입 성공 메시지 추가
-                    st.success(f"**{new_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다.")
-                    st.balloons() # 축하 풍선 효과
+                    # 회원가입 성공 시 바로 메시지를 보여주지 않고 세션 상태에만 저장
+                    st.session_state.signup_success_username = new_username # 사용자 이름 저장
                     st.session_state.page = "로그인" # 회원가입 성공 시 로그인 페이지로 이동
                     # --- 디버깅용 print ---
                     print(f"DEBUG: 회원가입: {new_username} 등록됨. 로그인 페이지로 새로고침 중.")
