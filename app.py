@@ -52,6 +52,15 @@ if 'username' not in st.session_state:
 if 'page' not in st.session_state:
     st.session_state.page = "로그인" # 초기 페이지 설정
 
+# 회원가입 성공 메시지 관리를 위한 세션 상태 추가
+# 이 변수에 사용자 이름을 저장하고, 로그인 페이지에서 사용 후 초기화합니다.
+if 'signup_success_username' not in st.session_state:
+    st.session_state.signup_success_username = None
+
+# 문제점 접수 성공 메시지 관리를 위한 세션 상태 추가
+if 'issue_submitted_success' not in st.session_state:
+    st.session_state.issue_submitted_success = False
+
 # 추가: 문제점 목록을 저장할 리스트 (앱 재시작 시 초기화됨, 영구 저장을 원하면 DB 필요)
 if 'issues' not in st.session_state:
     st.session_state.issues = []
@@ -144,6 +153,10 @@ else:
         st.session_state.logged_in = False
         st.session_state.username = None
         st.session_state.page = "로그인" # 로그아웃 후 로그인 페이지로 이동
+        # 회원가입 성공 메시지 초기화 (로그아웃 시에도)
+        st.session_state.signup_success_username = None
+        # 문제점 접수 성공 메시지 초기화
+        st.session_state.issue_submitted_success = False
         st.info("로그아웃 되었습니다.")
         # --- 디버깅용 print ---
         print("DEBUG: 로그아웃됨. 새로고침 중.")
@@ -158,7 +171,17 @@ if st.session_state.page == "로그인":
     st.title("로그인")
     # --- 디버깅용 print ---
     print("DEBUG: 로그인 페이지 표시 중.")
+    print(f"DEBUG: 로그인 페이지 로드 시 signup_success_username: {st.session_state.signup_success_username}") # 디버그 추가
     # -------------------
+
+    # 회원가입 성공 후 로그인 페이지로 왔을 때만 메시지 표시
+    if st.session_state.signup_success_username:
+        st.success(f"**{st.session_state.signup_success_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다. 🎉")
+        st.balloons() # 풍선 효과
+        # 메시지를 한 번 보여준 후 세션 상태 초기화
+        st.session_state.signup_success_username = None
+        print("DEBUG: 회원가입 성공 메시지 표시 후 signup_success_username 초기화됨.") # 디버그 추가
+
     username = st.text_input("아이디", key="login_username_input")
     password = st.text_input("비밀번호", type="password", key="login_password_input")
     login_button = st.button("로그인")
@@ -204,9 +227,9 @@ elif st.session_state.page == "회원가입":
             else:
                 # register_user 함수를 호출하여 데이터베이스에 사용자 정보 저장
                 if register_user(new_username, new_password, new_email, new_gender, new_birthday, new_age):
-                    # 회원가입 성공 메시지 추가
-                    st.success(f"**{new_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다.")
-                    st.balloons() # 축하 풍선 효과
+                    # 회원가입 성공 시 메시지는 로그인 페이지에서 표시하기 위해 세션 상태에 저장
+                    st.session_state.signup_success_username = new_username # 사용자 이름 저장
+                    print(f"DEBUG: 회원가입 성공! 세션 상태에 사용자 이름 저장됨: {st.session_state.signup_success_username}") # 디버그 추가
                     st.session_state.page = "로그인" # 회원가입 성공 시 로그인 페이지로 이동
                     # --- 디버깅용 print ---
                     print(f"DEBUG: 회원가입: {new_username} 등록됨. 로그인 페이지로 새로고침 중.")
@@ -225,6 +248,14 @@ elif st.session_state.page == "문제점 접수":
     print("DEBUG: 문제점 접수 페이지 표시 중.")
     # -------------------
     st.write(f"환영합니다, **{st.session_state.username}**님! 어떤 문제점을 접수하시겠어요?")
+
+    # 문제점 접수 성공 메시지 표시
+    if st.session_state.issue_submitted_success:
+        st.success("🎉 문제점이 성공적으로 접수되었습니다! 🎉")
+        st.balloons()
+        # 메시지를 한 번 표시한 후 초기화
+        st.session_state.issue_submitted_success = False
+        print("DEBUG: 문제점 접수 성공 메시지 표시 후 초기화됨.")
 
     with st.form("issue_submission_form"):
         issue_title = st.text_input("문제점 제목", max_chars=100, key="issue_title_input")
@@ -247,11 +278,7 @@ elif st.session_state.page == "문제점 접수":
                 print("DEBUG: 문제점 접수: 필수 필드 누락.")
                 # -------------------
             else:
-                # 문제점 접수 성공 메시지 추가
-                st.success("문제점이 성공적으로 접수되었습니다!")
-                st.info(f"**제목:** {issue_title}\n**종류:** {issue_type}\n**내용:** {issue_description}\n\n**접수자:** {st.session_state.username}\n**접수일:** {submission_date}")
-
-                # 접수된 문제점을 세션 상태에 저장 (앱 재시작 시 초기화됨)
+                # 문제점 접수 정보를 세션 상태에 저장 (앱 재시작 시 초기화됨)
                 new_issue = {
                     "제목": issue_title,
                     "종류": issue_type,
@@ -260,12 +287,16 @@ elif st.session_state.page == "문제점 접수":
                     "접수일": submission_date
                 }
                 st.session_state.issues.append(new_issue)
+                # 문제점 접수 성공 플래그 설정
+                st.session_state.issue_submitted_success = True
                 # --- 디버깅용 print ---
                 print(f"DEBUG: 문제점 접수됨: {issue_title}. 총 문제점 수: {len(st.session_state.issues)}")
                 # -------------------
 
-                st.session_state.page = "내 문제점 보기" # 접수 완료 후 자동으로 내 문제점 보기 페이지로 이동
-                st.rerun() # UI 업데이트를 위해 새로고침
+                # 문제점 접수 완료 후 현재 페이지(문제점 접수)에서 메시지를 보여주기 위해
+                # st.rerun()을 호출하여 페이지를 다시 로드합니다.
+                # 이렇게 하면 위에 정의된 if st.session_state.issue_submitted_success: 블록이 실행됩니다.
+                st.rerun()
 
 # 내 문제점 보기 페이지
 elif st.session_state.page == "내 문제점 보기":
