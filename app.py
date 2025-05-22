@@ -204,7 +204,9 @@ elif st.session_state.page == "회원가입":
             else:
                 # register_user 함수를 호출하여 데이터베이스에 사용자 정보 저장
                 if register_user(new_username, new_password, new_email, new_gender, new_birthday, new_age):
+                    # 회원가입 성공 메시지 추가
                     st.success(f"**{new_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다.")
+                    st.balloons() # 축하 풍선 효과
                     st.session_state.page = "로그인" # 회원가입 성공 시 로그인 페이지로 이동
                     # --- 디버깅용 print ---
                     print(f"DEBUG: 회원가입: {new_username} 등록됨. 로그인 페이지로 새로고침 중.")
@@ -245,8 +247,9 @@ elif st.session_state.page == "문제점 접수":
                 print("DEBUG: 문제점 접수: 필수 필드 누락.")
                 # -------------------
             else:
+                # 문제점 접수 성공 메시지 추가
                 st.success("문제점이 성공적으로 접수되었습니다!")
-                st.info(f"**제목:** {issue_title}\n**종류:** {issue_type}\n**내용:** {issue_description}")
+                st.info(f"**제목:** {issue_title}\n**종류:** {issue_type}\n**내용:** {issue_description}\n\n**접수자:** {st.session_state.username}\n**접수일:** {submission_date}")
 
                 # 접수된 문제점을 세션 상태에 저장 (앱 재시작 시 초기화됨)
                 new_issue = {
@@ -284,4 +287,4 @@ elif st.session_state.page == "내 문제점 보기":
                 # 필요하다면 여기에 추가 정보 (예: 접수자)를 표시할 수 있습니다.
     else: # 접수된 문제점이 없으면 안내 메시지 표시
         st.info("아직 접수하신 문제점이 없습니다.")
-        st.info("좌측 메뉴에서 '문제점 접수'를 통해 새로운 문제점을 접수해보세요.")
+        st.info("좌측 메뉴에서 **'문제점 접수'**를 통해 새로운 문제점을 접수해보세요.")
