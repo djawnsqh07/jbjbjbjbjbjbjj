@@ -52,10 +52,12 @@ if 'username' not in st.session_state:
 if 'page' not in st.session_state:
     st.session_state.page = "로그인" # 초기 페이지 설정
 
-# 회원가입 성공 메시지 관리를 위한 세션 상태 추가
-# 이 변수에 사용자 이름을 저장하고, 로그인 페이지에서 사용 후 초기화합니다.
-if 'signup_success_username' not in st.session_state:
-    st.session_state.signup_success_username = None
+# 회원가입 성공 메시지 관리를 위한 세션 상태 (이제 로그인 페이지에서 사용하지 않음)
+# 대신 회원가입 페이지 내에서만 사용할 플래그를 사용합니다.
+if 'show_signup_success_message' not in st.session_state:
+    st.session_state.show_signup_success_message = False
+if 'last_signed_up_username' not in st.session_state:
+    st.session_state.last_signed_up_username = None
 
 # 문제점 접수 성공 메시지 관리를 위한 세션 상태 추가
 if 'issue_submitted_success' not in st.session_state:
@@ -153,8 +155,9 @@ else:
         st.session_state.logged_in = False
         st.session_state.username = None
         st.session_state.page = "로그인" # 로그아웃 후 로그인 페이지로 이동
-        # 회원가입 성공 메시지 초기화 (로그아웃 시에도)
-        st.session_state.signup_success_username = None
+        # 회원가입 성공 메시지 관련 세션 상태 초기화
+        st.session_state.show_signup_success_message = False
+        st.session_state.last_signed_up_username = None
         # 문제점 접수 성공 메시지 초기화
         st.session_state.issue_submitted_success = False
         st.info("로그아웃 되었습니다.")
@@ -171,16 +174,10 @@ if st.session_state.page == "로그인":
     st.title("로그인")
     # --- 디버깅용 print ---
     print("DEBUG: 로그인 페이지 표시 중.")
-    print(f"DEBUG: 로그인 페이지 로드 시 signup_success_username: {st.session_state.signup_success_username}") # 디버그 추가
     # -------------------
-
-    # 회원가입 성공 후 로그인 페이지로 왔을 때만 메시지 표시
-    if st.session_state.signup_success_username:
-        st.success(f"**{st.session_state.signup_success_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다. 🎉")
-        st.balloons() # 풍선 효과
-        # 메시지를 한 번 보여준 후 세션 상태 초기화
-        st.session_state.signup_success_username = None
-        print("DEBUG: 회원가입 성공 메시지 표시 후 signup_success_username 초기화됨.") # 디버그 추가
+    # 회원가입 페이지에서 메시지를 띄우므로, 로그인 페이지에서는 더 이상 회원가입 메시지를 처리하지 않습니다.
+    # 이전 코드: if st.session_state.signup_success_username: ...
+    # 이 부분은 삭제되거나 주석 처리됩니다.
 
     username = st.text_input("아이디", key="login_username_input")
     password = st.text_input("비밀번호", type="password", key="login_password_input")
@@ -198,6 +195,22 @@ elif st.session_state.page == "회원가입":
     # --- 디버깅용 print ---
     print("DEBUG: 회원가입 페이지 표시 중.")
     # -------------------
+
+    # 회원가입 성공 메시지 표시 (회원가입 버튼 클릭 후)
+    if st.session_state.show_signup_success_message:
+        st.success(f"**{st.session_state.last_signed_up_username}**님, 회원가입이 완료되었습니다! 이제 로그인할 수 있습니다. 🎉")
+        st.balloons() # 풍선 효과
+        st.info("로그인 페이지로 이동하시려면 아래 버튼을 눌러주세요.")
+        if st.button("로그인 페이지로 이동하기"):
+            st.session_state.page = "로그인"
+            st.session_state.show_signup_success_message = False # 메시지 초기화
+            st.session_state.last_signed_up_username = None # 사용자 이름 초기화
+            st.rerun()
+        # 메시지를 표시했으니 다음 새로고침 시에는 다시 표시되지 않도록 플래그를 False로 설정
+        # 단, "로그인 페이지로 이동하기" 버튼을 누르기 전까지는 메시지가 유지되어야 하므로,
+        # 이 부분을 제거하고 버튼 클릭 시에만 초기화하도록 합니다.
+        # st.session_state.show_signup_success_message = False # 삭제 또는 주석 처리
+
     with st.form("signup_form"): # Streamlit의 폼 기능을 사용하여 입력 필드를 그룹화
         new_username = st.text_input("아이디", key="signup_username_input")
         new_password = st.text_input("비밀번호", type="password", key="signup_password_input")
@@ -214,6 +227,9 @@ elif st.session_state.page == "회원가입":
             # --- 디버깅용 print ---
             print("DEBUG: 회원가입 폼 제출됨.")
             # -------------------
+            # 회원가입 버튼을 누르면 메시지 표시 플래그는 일단 False로 리셋
+            st.session_state.show_signup_success_message = False
+
             if not new_username or not new_password or not new_password_confirm:
                 st.error("아이디, 비밀번호, 비밀번호 확인은 필수 입력 항목입니다.")
                 # --- 디버깅용 print ---
@@ -227,14 +243,13 @@ elif st.session_state.page == "회원가입":
             else:
                 # register_user 함수를 호출하여 데이터베이스에 사용자 정보 저장
                 if register_user(new_username, new_password, new_email, new_gender, new_birthday, new_age):
-                    # 회원가입 성공 시 메시지는 로그인 페이지에서 표시하기 위해 세션 상태에 저장
-                    st.session_state.signup_success_username = new_username # 사용자 이름 저장
-                    print(f"DEBUG: 회원가입 성공! 세션 상태에 사용자 이름 저장됨: {st.session_state.signup_success_username}") # 디버그 추가
-                    st.session_state.page = "로그인" # 회원가입 성공 시 로그인 페이지로 이동
+                    # 회원가입 성공 시 메시지 표시 플래그를 True로 설정
+                    st.session_state.show_signup_success_message = True
+                    st.session_state.last_signed_up_username = new_username # 마지막 가입 사용자 저장
                     # --- 디버깅용 print ---
-                    print(f"DEBUG: 회원가입: {new_username} 등록됨. 로그인 페이지로 새로고침 중.")
+                    print(f"DEBUG: 회원가입: {new_username} 등록됨. 메시지 표시를 위해 새로고침 중.")
                     # -------------------
-                    st.rerun() # UI 업데이트를 위해 새로고침
+                    st.rerun() # UI 업데이트를 위해 새로고침 (이 시점에 위 메시지 조건이 실행됨)
                 else:
                     st.error("이미 존재하는 아이디입니다. 다른 아이디를 사용해주세요.")
                     # --- 디버깅용 print ---
